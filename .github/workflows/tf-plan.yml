@@ -28,6 +28,11 @@ on:
         required: false
         type: boolean
         default: false
+    outputs:
+      tfplan_exitcode:
+        description: "Terraform plan exit code"
+        value: ${{ jobs.plan.outputs.tfplan_exitcode }}
+    
 
 jobs:
   plan:
