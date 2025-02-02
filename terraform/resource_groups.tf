@@ -1,6 +1,4 @@
 resource "azurerm_resource_group" "this" {
-  name     = "rg-9000-${var.env}-${var.location_short}-01"
+  name     = "rg-test0-${var.env}-${var.location_short}-01"
   location = var.location
 }
-
-# 9001
