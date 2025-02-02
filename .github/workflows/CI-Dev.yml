@@ -13,35 +13,35 @@ permissions:
 jobs:
   terraform-ci:
     runs-on: ubuntu-latest
-    steps:
-      - name: Dummy Step – Skipping Terraform CI
-        run: echo "Terraform CI job skipped. Exiting successfully."
     # steps:
-    #   - name: Check out Repository
-    #     uses: actions/checkout@v3
+    #   - name: Dummy Step – Skipping Terraform CI
+    #     run: echo "Terraform CI job skipped. Exiting successfully."
+    steps:
+      - name: Check out Repository
+        uses: actions/checkout@v3
 
-    #   - name: Set up Terraform
-    #     uses: hashicorp/setup-terraform@v2
-    #     with:
-    #       terraform_version: 1.5.6
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.6
 
-    #   - name: Install TFLint
-    #     run: |
-    #       curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+      - name: Install TFLint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
 
-    #   - name: Install Checkov
-    #     run: |
-    #       pip install --upgrade pip
-    #       pip install checkov
+      - name: Install Checkov
+        run: |
+          pip install --upgrade pip
+          pip install checkov
 
-    #   - name: Format Check
-    #     run: terraform fmt -check -recursive
+      - name: Format Check
+        run: terraform fmt -check -recursive
 
-    #   - name: Validate
-    #     run: terraform validate
+      - name: Validate
+        run: terraform validate
 
-    #   - name: Lint with TFLint
-    #     run: tflint --init && tflint
+      - name: Lint with TFLint
+        run: tflint --init && tflint
 
-    #   - name: Run Checkov
-    #     run: checkov -d .
+      - name: Run Checkov
+        run: checkov -d .
