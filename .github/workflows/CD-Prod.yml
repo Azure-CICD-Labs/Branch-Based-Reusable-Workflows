@@ -34,6 +34,7 @@ jobs:
       # For pull_request, use the PR head SHA; for push, use github.sha
       checkout_ref: ${{ github.event.pull_request.head.sha || github.sha }}
       is_pr: ${{ github.event_name == 'pull_request' }}
+    secrets: inherit
 
   apply-prod:
     name: Apply to Prod
@@ -48,3 +49,4 @@ jobs:
       artifact_name: terraform-prod-plan
       tfstate_key: branch-based-reusable-workflows.tfstate
       checkout_ref: ${{ github.sha }}
+    secrets: inherit
