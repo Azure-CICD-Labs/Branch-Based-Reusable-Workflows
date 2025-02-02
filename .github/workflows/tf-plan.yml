@@ -78,6 +78,7 @@ jobs:
           exitcode=0
           terraform plan -detailed-exitcode -no-color -out=${{ inputs.plan_filename }} || exitcode=$?
           echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
+          echo "Terraform plan exit code: $exitcode"   # Prints to logs
 
           if [ $exitcode -eq 1 ]; then
             echo "Terraform Plan Failed!"
