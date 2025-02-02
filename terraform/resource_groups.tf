@@ -1,9 +1,4 @@
 resource "azurerm_resource_group" "this" {
-  name     = "rg-bbrw-${var.env}-${var.location_short}-04"
+  name     = "rg-bbrw-${var.env}-${var.location_short}-05"
   location = var.location
-  tags = {
-    feature = "myfeature"
-  }
 }
-
-# test
