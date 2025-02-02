@@ -133,7 +133,6 @@ jobs:
             console.log("is_pr:", "${{ inputs.is_pr }}");
             console.log("Full context:", JSON.stringify(context, null, 2));
       
-
       - name: Post Plan to PR (if PR event)
         if: ${{ inputs.is_pr == 'true' }}
         uses: actions/github-script@v7
