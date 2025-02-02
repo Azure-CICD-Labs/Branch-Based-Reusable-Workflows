@@ -1,0 +1,72 @@
+name: Terraform CD - Dev
+
+on:
+  workflow_run:
+    workflows: ["Terraform CI - Dev"]
+    types: [completed]
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  plan-dev:
+    name: Plan for Dev
+    runs-on: ubuntu-latest
+    environment: dev-plan
+    # Only run if CI ended successfully and the head_branch is dev
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'dev')
+    outputs:
+      tfplan_exitcode: ${{ steps.plan.outputs.tfplan_exitcode }}
+
+    steps:
+      - name: Call Reusable Terraform Plan
+        id: plan
+        uses: ./.github/workflows/reusable/terraform-plan.yml
+        with:
+          environment_name: dev
+          plan_filename: dev.tfplan
+          artifact_name: terraform-dev-plan
+          container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
+          tfstate_key: branch-based.tfstate
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          checkout_ref: ${{ github.event.workflow_run.head_sha }}
+          is_pr: ${{ github.event.workflow_run.event == 'pull_request' }}
+
+  apply-dev:
+    name: Apply to Dev
+    runs-on: ubuntu-latest
+    needs: plan-dev
+    environment: dev-apply  # gating environment with required approvers
+    # Only apply if:
+    #   - plan exitcode == 2 (changes),
+    #   - original event was push,
+    #   - environment gating is approved,
+    #   - the head_branch is dev
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'dev') &&
+      needs.plan-dev.outputs.tfplan_exitcode == '2' &&
+      github.event.workflow_run.event == 'push'
+
+    steps:
+      - name: (Manual Approval Required) Wait for Dev Approval
+        run: echo "Waiting for environment approval..."
+
+      - name: Call Reusable Terraform Apply
+        uses: ./.github/workflows/reusable/terraform-apply.yml
+        with:
+          environment_name: dev
+          plan_filename: dev.tfplan
+          artifact_name: terraform-dev-plan
+          container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
+          tfstate_key: branch-based.tfstate
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          checkout_ref: ${{ github.event.workflow_run.head_sha }}

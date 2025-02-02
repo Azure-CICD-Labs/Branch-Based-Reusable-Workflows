@@ -1,0 +1,82 @@
+name: Reusable Terraform Apply
+
+on:
+  workflow_call:
+    inputs:
+      environment_name:
+        description: "Environment name (e.g. dev or prod)"
+        required: true
+        type: string
+      plan_filename:
+        description: "Name of the .tfplan file (e.g. dev.tfplan)"
+        required: true
+        type: string
+      artifact_name:
+        description: "Name of the plan artifact (e.g. terraform-dev-plan)"
+        required: true
+        type: string
+      container_name:
+        description: "Azure Storage container name"
+        required: true
+        type: string
+      tfstate_key:
+        description: "Name of the .tfstate backend file"
+        required: true
+        type: string
+      subscription_id:
+        description: "ARM_SUBSCRIPTION_ID"
+        required: true
+        type: string
+      client_id:
+        description: "ARM_CLIENT_ID"
+        required: true
+        type: string
+      tenant_id:
+        description: "ARM_TENANT_ID"
+        required: true
+        type: string
+      checkout_ref:
+        description: "Git ref/sha to check out"
+        required: true
+        type: string
+
+jobs:
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout_ref }}
+          fetch-depth: 0
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ inputs.client_id }}
+          tenant-id: ${{ inputs.tenant_id }}
+          subscription-id: ${{ inputs.subscription_id }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.6
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: terraform
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          terraform init \
+            -backend-config="container_name=${{ inputs.container_name }}" \
+            -backend-config="key=${{ inputs.tfstate_key }}"
+
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve ${{ inputs.plan_filename }}

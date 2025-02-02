@@ -1,0 +1,79 @@
+name: Terraform CD - Prod
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  check_branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch
+        if: github.base_ref == 'main' && github.head_ref != 'dev'
+        run: |
+          echo "ERROR: You can only merge to main from dev."
+          exit 1
+
+  plan-prod:
+    name: Plan for Prod
+    runs-on: ubuntu-latest
+    needs: check_branch
+    environment: prod-plan
+    outputs:
+      tfplan_exitcode: ${{ steps.plan.outputs.tfplan_exitcode }}
+
+    steps:
+      - name: Call Reusable Terraform Plan
+        id: plan
+        uses: ./.github/workflows/reusable/terraform-plan.yml
+        with:
+          environment_name: prod
+          plan_filename: prod.tfplan
+          artifact_name: terraform-prod-plan
+          container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
+          tfstate_key: branch-based.tfstate
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+
+          # For pull_request, use the PR head SHA
+          # For push, use github.sha
+          # (Because workflow_call input is mandatory, we handle both cases)
+          checkout_ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+          is_pr: ${{ github.event_name == 'pull_request' }}
+
+  apply-prod:
+    name: Apply to Prod
+    runs-on: ubuntu-latest
+    needs: plan-prod
+    environment: prod-apply  # required approvals
+    # Only apply if push event and plan exitcode == '2'
+    if: >
+      github.event_name == 'push' &&
+      needs.plan-prod.outputs.tfplan_exitcode == '2'
+
+    steps:
+      - name: (Manual Approval Required) Wait for Prod Approval
+        run: echo "Waiting for environment approval..."
+
+      - name: Call Reusable Terraform Apply
+        uses: ./.github/workflows/reusable/terraform-apply.yml
+        with:
+          environment_name: prod
+          plan_filename: prod.tfplan
+          artifact_name: terraform-prod-plan
+          container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
+          tfstate_key: branch-based.tfstate
+          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+          # For the post-merge push, you can just use github.sha
+          checkout_ref: ${{ github.sha }}
