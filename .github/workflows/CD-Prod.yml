@@ -13,67 +13,45 @@ permissions:
 
 jobs:
   check_branch:
+    name: Check branch
     runs-on: ubuntu-latest
     steps:
-      - name: Check branch
+      - name: Check if only merging dev -> main
         if: github.base_ref == 'main' && github.head_ref != 'dev'
         run: |
           echo "ERROR: You can only merge to main from dev."
           exit 1
 
   plan-prod:
+    # This job calls the Reusable Terraform Plan workflow from your repo
     name: Plan for Prod
-    runs-on: ubuntu-latest
-    needs: check_branch
-    environment: prod-plan
-    outputs:
-      tfplan_exitcode: ${{ steps.plan.outputs.tfplan_exitcode }}
-
-    steps:
-      - name: Call Reusable Terraform Plan
-        id: plan
-        uses: ./.github/workflows/tf-plan.yml
-        with:
-          environment_name: prod
-          plan_filename: prod.tfplan
-          artifact_name: terraform-prod-plan
-          container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
-          tfstate_key: branch-based.tfstate
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-
-          # For pull_request, use the PR head SHA
-          # For push, use github.sha
-          # (Because workflow_call input is mandatory, we handle both cases)
-          checkout_ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-          is_pr: ${{ github.event_name == 'pull_request' }}
+    needs: [check_branch]
+    uses: Azure-CICD-Labs/Branch-Based-Reusable-Workflows/.github/workflows/tf-plan.yml@main
+    with:
+      environment_name: prod-plan
+      plan_filename: prod.tfplan
+      artifact_name: terraform-prod-plan
+      container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
+      tfstate_key: branch-based.tfstate
+      # For pull_request, use the PR head SHA; for push, use github.sha
+      checkout_ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      is_pr: ${{ github.event_name == 'pull_request' }}
 
   apply-prod:
+    # This job calls the Reusable Terraform Apply workflow
     name: Apply to Prod
-    runs-on: ubuntu-latest
-    needs: plan-prod
-    environment: prod-apply  # required approvals
-    # Only apply if push event and plan exitcode == '2'
+    needs: [plan-prod]
+    uses: Azure-CICD-Labs/Branch-Based-Reusable-Workflows/.github/workflows/tf-apply.yml@main
+
+    # Only run if push event + Plan had exitcode==2
     if: >
       github.event_name == 'push' &&
       needs.plan-prod.outputs.tfplan_exitcode == '2'
 
-    steps:
-      - name: (Manual Approval Required) Wait for Prod Approval
-        run: echo "Waiting for environment approval..."
-
-      - name: Call Reusable Terraform Apply
-        uses: ./.github/workflows/tf-apply.yml
-        with:
-          environment_name: prod
-          plan_filename: prod.tfplan
-          artifact_name: terraform-prod-plan
-          container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
-          tfstate_key: branch-based.tfstate
-          subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-          # For the post-merge push, you can just use github.sha
-          checkout_ref: ${{ github.sha }}
+    with:
+      environment_name: prod-apply
+      plan_filename: prod.tfplan
+      artifact_name: terraform-prod-plan
+      container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
+      tfstate_key: branch-based.tfstate
+      checkout_ref: ${{ github.sha }}

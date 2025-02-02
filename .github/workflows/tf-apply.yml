@@ -4,15 +4,15 @@ on:
   workflow_call:
     inputs:
       environment_name:
-        description: "Environment name (e.g. dev or prod)"
+        description: "Environment name (e.g. dev-apply or prod-apply)"
         required: true
         type: string
       plan_filename:
-        description: "Name of the .tfplan file (e.g. dev.tfplan)"
+        description: "Name of the .tfplan file"
         required: true
         type: string
       artifact_name:
-        description: "Name of the plan artifact (e.g. terraform-dev-plan)"
+        description: "Name of the plan artifact"
         required: true
         type: string
       container_name:
@@ -20,19 +20,7 @@ on:
         required: true
         type: string
       tfstate_key:
-        description: "Name of the .tfstate backend file"
-        required: true
-        type: string
-      subscription_id:
-        description: "ARM_SUBSCRIPTION_ID"
-        required: true
-        type: string
-      client_id:
-        description: "ARM_CLIENT_ID"
-        required: true
-        type: string
-      tenant_id:
-        description: "ARM_TENANT_ID"
+        description: "Backend state file name"
         required: true
         type: string
       checkout_ref:
@@ -45,6 +33,8 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
 
+    environment: ${{ inputs.environment_name }}
+
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -55,9 +45,9 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
-          client-id: ${{ inputs.client_id }}
-          tenant-id: ${{ inputs.tenant_id }}
-          subscription-id: ${{ inputs.subscription_id }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
