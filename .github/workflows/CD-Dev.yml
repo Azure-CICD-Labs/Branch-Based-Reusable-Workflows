@@ -31,7 +31,7 @@ jobs:
           plan_filename: dev.tfplan
           artifact_name: terraform-dev-plan
           container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
-          tfstate_key: branch-based.tfstate
+          tfstate_key: branch-based-reusable-workflows.tfstate
           subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           client_id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant_id: ${{ secrets.AZURE_TENANT_ID }}
@@ -65,7 +65,7 @@ jobs:
           plan_filename: dev.tfplan
           artifact_name: terraform-dev-plan
           container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
-          tfstate_key: branch-based.tfstate
+          tfstate_key: branch-based-reusable-workflows.tfstate
           subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           client_id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant_id: ${{ secrets.AZURE_TENANT_ID }}

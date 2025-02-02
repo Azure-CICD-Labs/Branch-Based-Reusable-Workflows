@@ -64,7 +64,7 @@ jobs:
         working-directory: terraform
         run: |
           terraform init \
-            -backend-config="container_name=${{ inputs.container_name }}" \
+            -backend-config="container_name=${{ vars.TFSTATE_CONTAINER_NAME }}" \
             -backend-config="key=${{ inputs.tfstate_key }}"
 
       - name: Terraform Apply

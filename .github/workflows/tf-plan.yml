@@ -1,55 +1,95 @@
-name: Terraform CD - Prod
+name: Reusable Terraform Plan
 
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
-
-permissions:
-  contents: read
-  id-token: write
-  pull-requests: write
+  workflow_call:
+    inputs:
+      environment_name:
+        description: "Environment name for gating (e.g. dev-plan or prod-plan)"
+        required: true
+        type: string
+      plan_filename:
+        description: "Name of .tfplan file"
+        required: true
+        type: string
+      artifact_name:
+        description: "Name of artifact to upload (e.g. terraform-dev-plan)"
+        required: true
+        type: string
+      container_name:
+        description: "Azure Storage container for TF state"
+        required: true
+        type: string
+      tfstate_key:
+        description: "Backend state file key"
+        required: true
+        type: string
+      checkout_ref:
+        description: "Git ref/sha to check out"
+        required: true
+        type: string
+      is_pr:
+        description: "Whether the original event is a PR"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
-  check_branch:
-    name: Check branch
+  plan:
+    name: Terraform Plan
     runs-on: ubuntu-latest
+
+    # "environment_name" controls environment gating & environment secrets
+    environment: ${{ inputs.environment_name }}
+
+    outputs:
+      tfplan_exitcode: ${{ steps.tf-plan.outputs.exitcode }}
+
     steps:
-      - name: Check if only merging dev -> main
-        if: github.base_ref == 'main' && github.head_ref != 'dev'
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.checkout_ref }}
+          fetch-depth: 0
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.6
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: terraform
         run: |
-          echo "ERROR: You can only merge to main from dev."
-          exit 1
+          terraform init \
+            -backend-config="container_name=${{ inputs.container_name }}" \
+            -backend-config="key=${{ inputs.tfstate_key }}"
 
-  plan-prod:
-    uses: Azure-CICD-Labs/Branch-Based-Reusable-Workflows/.github/workflows/tf-plan.yml@main
-    name: Plan for Prod
-    needs: [check_branch]
-    with:
-      environment_name: prod-plan
-      plan_filename: prod.tfplan
-      artifact_name: terraform-prod-plan
+      - name: Terraform Plan
+        id: tf-plan
+        working-directory: terraform
+        shell: bash
+        run: |
+          exitcode=0
+          terraform plan -detailed-exitcode -no-color -out=${{ inputs.plan_filename }} || exitcode=$?
+          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
 
-      # For pull_request, use the PR head SHA
-      # For push, use github.sha
-      checkout_ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          if [ $exitcode -eq 1 ]; then
+            echo "Terraform Plan Failed!"
+            exit 1
+          fi
 
-      is_pr: ${{ github.event_name == 'pull_request' }}
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: terraform/${{ inputs.plan_filename }}
 
-  apply-prod:
-    uses: Azure-CICD-Labs/Branch-Based-Reusable-Workflows/.github/workflows/tf-apply.yml@main
-    name: Apply to Prod
-    needs: [plan-prod]
-
-    # Only apply if it's a push event and the plan had exitcode == '2'
-    if: >
-      github.event_name == 'push' &&
-      needs.plan-prod.outputs.tfplan_exitcode == '2'
-
-    # ***** CALL THE REUSABLE WORKFLOW INSTEAD OF STEPS *****
-
-    with:
-      environment_name: prod-apply
-      plan_filename: prod.tfplan
-      artifact_name: terraform-prod-plan
+      # OPTIONAL: Add steps to produce plan summary or comment on PR, if you like
+      # (omitted here for brevity)
