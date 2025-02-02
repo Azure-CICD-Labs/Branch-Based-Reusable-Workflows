@@ -29,6 +29,11 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
 jobs:
   plan:
     name: Terraform Plan
@@ -82,3 +87,45 @@ jobs:
         with:
           name: ${{ inputs.artifact_name }}
           path: terraform/${{ inputs.plan_filename }}
+      - name: Create Plan String
+        id: planstring
+        if: always()  # or you can condition this on a successful plan
+        working-directory: terraform
+        run: |
+          # We capture the plan details
+          PLAN_CONTENT=$(terraform show -no-color ${{ inputs.plan_filename }})
+          # Generate a random delimiter to properly set multi-line output
+          delimiter="$(openssl rand -hex 8)"
+
+          echo "summary<<${delimiter}" >> $GITHUB_OUTPUT
+          echo "## Terraform Plan Output (${{ inputs.environment_name }})" >> $GITHUB_OUTPUT
+          echo "<details><summary>Click to expand</summary>" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo '```terraform' >> $GITHUB_OUTPUT
+          echo "$PLAN_CONTENT" >> $GITHUB_OUTPUT
+          echo '```' >> $GITHUB_OUTPUT
+          echo "</details>" >> $GITHUB_OUTPUT
+          echo "${delimiter}" >> $GITHUB_OUTPUT
+  
+      - name: Publish Plan to Task Summary
+        if: always()
+        env:
+          SUMMARY: ${{ steps.planstring.outputs.summary }}
+        run: echo "$SUMMARY" >> $GITHUB_STEP_SUMMARY
+
+      - name: Post Plan to PR (if PR event)
+        if: ${{ inputs.is_pr == 'true' }}
+        uses: actions/github-script@v7
+        env:
+          SUMMARY: ${{ steps.planstring.outputs.summary }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body = process.env.SUMMARY;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+  
