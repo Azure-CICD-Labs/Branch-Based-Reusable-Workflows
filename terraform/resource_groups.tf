@@ -6,4 +6,4 @@ resource "azurerm_resource_group" "this" {
   }
 }
 
-# feature
+# test
