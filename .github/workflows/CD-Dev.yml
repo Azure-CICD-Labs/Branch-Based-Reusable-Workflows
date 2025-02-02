@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: Call Reusable Terraform Plan
         id: plan
-        uses: ./.github/workflows/reusable/terraform-plan.yml
+        uses: ./.github/workflows/reusable/tf-plan.yml
         with:
           environment_name: dev-plan
           plan_filename: dev.tfplan
@@ -59,7 +59,7 @@ jobs:
         run: echo "Waiting for environment approval..."
 
       - name: Call Reusable Terraform Apply
-        uses: ./.github/workflows/reusable/terraform-apply.yml
+        uses: ./.github/workflows/reusable/tf-apply.yml
         with:
           environment_name: dev
           plan_filename: dev.tfplan
