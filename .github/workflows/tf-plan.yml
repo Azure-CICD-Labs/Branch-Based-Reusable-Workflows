@@ -137,12 +137,3 @@ jobs:
               repo: context.repo.repo,
               body: body
             });
-# print the exit code from the outputs
-  debug:
-    name: Debug
-    runs-on: ubuntu-latest
-    needs: [plan]
-    steps:
-      - name: Debug
-        run: |
-          echo "Plan exit code: ${{ needs.plan.outputs.tfplan_exitcode }}"
