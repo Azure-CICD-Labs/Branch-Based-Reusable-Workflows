@@ -33,7 +33,7 @@ jobs:
   plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    # The environment for this job is set from the input.
+    # The job’s environment (and its secrets) are set from the input.
     environment: ${{ inputs.environment_name }}
     outputs:
       tfplan_exitcode: ${{ steps.tf-plan.outputs.exitcode }}
@@ -43,14 +43,6 @@ jobs:
         with:
           ref: ${{ inputs.checkout_ref }}
           fetch-depth: 0
-
-      - name: Debug Secrets & vars (for testing only)
-        run: |
-            echo "Environment Name: ${{ inputs.environment_name }}"
-            echo "Azure Client ID: ${{ secrets.AZURE_CLIENT_ID }}"
-            echo "Azure Tenant ID: ${{ secrets.AZURE_TENANT_ID }}"
-            echo "Azure Subscription ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-            echo "TFSTATE_CONTAINER_NAME: ${{ vars.TFSTATE_CONTAINER_NAME }}"
 
       - name: Azure Login
         uses: azure/login@v1
