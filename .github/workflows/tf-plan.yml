@@ -32,7 +32,10 @@ on:
       tfplan_exitcode:
         description: "Terraform plan exit code"
         value: ${{ jobs.plan.outputs.tfplan_exitcode }}
-    
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   plan:
