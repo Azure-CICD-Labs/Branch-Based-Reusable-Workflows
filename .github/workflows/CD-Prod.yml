@@ -23,7 +23,6 @@ jobs:
           exit 1
 
   plan-prod:
-    # This job calls the Reusable Terraform Plan workflow from your repo
     name: Plan for Prod
     needs: [check_branch]
     uses: Azure-CICD-Labs/Branch-Based-Reusable-Workflows/.github/workflows/tf-plan.yml@main
@@ -37,16 +36,12 @@ jobs:
       is_pr: ${{ github.event_name == 'pull_request' }}
 
   apply-prod:
-    # This job calls the Reusable Terraform Apply workflow
     name: Apply to Prod
     needs: [plan-prod]
     uses: Azure-CICD-Labs/Branch-Based-Reusable-Workflows/.github/workflows/tf-apply.yml@main
-
-    # Only run if push event + Plan had exitcode==2
     if: >
       github.event_name == 'push' &&
       needs.plan-prod.outputs.tfplan_exitcode == '2'
-
     with:
       environment_name: prod-apply
       plan_filename: prod.tfplan

@@ -8,19 +8,15 @@ on:
         required: true
         type: string
       plan_filename:
-        description: "Name of .tfplan file"
+        description: "Name of the .tfplan file"
         required: true
         type: string
       artifact_name:
-        description: "Name of artifact to upload (e.g. terraform-dev-plan)"
-        required: true
-        type: string
-      container_name:
-        description: "Azure Storage container for TF state"
+        description: "Name of the plan artifact (e.g. terraform-prod-plan)"
         required: true
         type: string
       tfstate_key:
-        description: "Backend state file key"
+        description: "Backend state file key (e.g. branch-based-reusable-workflows.tfstate)"
         required: true
         type: string
       checkout_ref:
@@ -37,13 +33,10 @@ jobs:
   plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-
-    # "environment_name" controls environment gating & environment secrets
+    # The environment for this job is set from the input.
     environment: ${{ inputs.environment_name }}
-
     outputs:
       tfplan_exitcode: ${{ steps.tf-plan.outputs.exitcode }}
-
     steps:
       - name: Check out code
         uses: actions/checkout@v3
@@ -79,7 +72,6 @@ jobs:
           exitcode=0
           terraform plan -detailed-exitcode -no-color -out=${{ inputs.plan_filename }} || exitcode=$?
           echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
-
           if [ $exitcode -eq 1 ]; then
             echo "Terraform Plan Failed!"
             exit 1
@@ -90,6 +82,3 @@ jobs:
         with:
           name: ${{ inputs.artifact_name }}
           path: terraform/${{ inputs.plan_filename }}
-
-      # OPTIONAL: Add steps to produce plan summary or comment on PR, if you like
-      # (omitted here for brevity)
