@@ -33,7 +33,6 @@ jobs:
   plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    # The job’s environment (and its secrets) are set from the input.
     environment: ${{ inputs.environment_name }}
     outputs:
       tfplan_exitcode: ${{ steps.tf-plan.outputs.exitcode }}
@@ -79,10 +78,12 @@ jobs:
           exitcode=0
           terraform plan -detailed-exitcode -no-color -out=${{ inputs.plan_filename }} || exitcode=$?
           echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
+
           if [ $exitcode -eq 1 ]; then
             echo "Terraform Plan Failed!"
             exit 1
           fi
+          # exitcode=0 => no changes, exitcode=2 => changes present
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
