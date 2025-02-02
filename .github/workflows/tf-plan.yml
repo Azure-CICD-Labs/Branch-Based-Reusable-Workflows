@@ -130,8 +130,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            echo 'is_pr', ${{ inputs.is_pr }};
-            console.log('Full context:', JSON.stringify(context, null, 2));
+            console.log("is_pr:", "${{ inputs.is_pr }}");
+            console.log("Full context:", JSON.stringify(context, null, 2));
+      
 
       - name: Post Plan to PR (if PR event)
         if: ${{ inputs.is_pr == 'true' }}
