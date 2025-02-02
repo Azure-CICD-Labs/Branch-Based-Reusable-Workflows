@@ -27,7 +27,7 @@ jobs:
         id: plan
         uses: ./.github/workflows/reusable/terraform-plan.yml
         with:
-          environment_name: dev
+          environment_name: dev-plan
           plan_filename: dev.tfplan
           artifact_name: terraform-dev-plan
           container_name: ${{ vars.TFSTATE_CONTAINER_NAME }}
