@@ -29,11 +29,6 @@ on:
         type: boolean
         default: false
 
-permissions:
-  contents: read
-  id-token: write
-  pull-requests: write
-
 jobs:
   plan:
     name: Terraform Plan
@@ -42,6 +37,9 @@ jobs:
     environment: ${{ inputs.environment_name }}
     outputs:
       tfplan_exitcode: ${{ steps.tf-plan.outputs.exitcode }}
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_SKIP_PROVIDER_REGISTRATION: "true"
     steps:
       - name: Check out code
         uses: actions/checkout@v3
